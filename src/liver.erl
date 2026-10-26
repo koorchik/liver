@@ -8,10 +8,13 @@
 -export([which/1, which/2]).
 -export([add_rule/2]).
 -export([add_rule_set/2]).
+-export([add_aliased_rule/1]).
 -export([custom_error/2]).
 
 -include("liver.hrl").
 -include("liver_rules.hrl").
+
+-define(ALIASED_RULES_KEY, liver_aliased_rules).
 
 -define(IsKV(Data),
     (is_map(Data) orelse is_list(Data))
@@ -83,8 +86,11 @@ validate_term(Schema, Data, Opts0) when ?IsKV(Opts0) ->
 which(Rule) ->
     which(Rule, #{}).
 
-which(Rule, Opts) when is_map(Opts); is_list(Opts) ->
-    maps:get(Rule, rules_map(normalize_opts(Opts)), undefined_module).
+%% Called for every rule: no normalize_opts/1, which resolves aliased rules.
+which(Rule, Opts) when is_map(Opts) ->
+    maps:get(Rule, rules_map(Opts), undefined_module);
+which(Rule, Opts) when is_list(Opts) ->
+    which(Rule, maps:from_list(Opts)).
 
 add_rule(Rule, Module) when is_atom(Rule), is_atom(Module) ->
     OldRules = application:get_env(?MODULE, rules, ?DEFAULT_RULES),
@@ -97,6 +103,18 @@ add_rule(Rule, Module) when is_atom(Rule), is_atom(Module) ->
 add_rule_set(Name, Rules) when is_atom(Name), is_map(Rules) ->
     Sets = application:get_env(?MODULE, rule_sets, #{}),
     application:set_env(?MODULE, rule_sets, maps:put(Name, Rules, Sets)).
+
+%% Register a LIVR aliased rule: a rule defined by other rules, e.g.
+%%   liver:add_aliased_rule(#{name => adult_age,
+%%                            rules => [positive_integer, #{min_number => 18}],
+%%                            error => <<"WRONG_AGE">>}).
+%% Keys may be binaries too (decoded JSON), `error' is optional.
+%% Stored in a persistent_term, as validate/3 reads it on every call.
+add_aliased_rule(Alias) when is_map(Alias); is_list(Alias) ->
+    {Name, Rules, Error} = parse_aliased_rule(Alias),
+    Aliases = persistent_term:get(?ALIASED_RULES_KEY, #{}),
+    persistent_term:put(?ALIASED_RULES_KEY,
+                        maps:put(Name, {Rules, Error}, Aliases)).
 
 custom_error(ErrCode, ErrMsg) when is_atom(ErrCode) ->
     OldErrors = application:get_env(?MODULE, errors, ?DEFAULT_ERRORS),
@@ -123,7 +141,7 @@ validate([{K, schema}|Keys], Schema, In, Out, Errors, Opts) ->
     %% Key from Schema doesn't exist in Data
     Rules = liver_maps:get(K, Schema),
     Rules2 = liver_rules:normalize(Rules, In),
-    case liver_rules:has_required(Rules2) of
+    case liver_rules:has_required(Rules2, Opts) of
         true ->
             case liver_rules:execute(Rules2, Opts) of
                 {ok, ?MISSED_FIELD_VALUE} ->
@@ -225,12 +243,52 @@ detect_datatype_by_schema(_Schema, _Opts) ->
     term.
 
 is_valid_rule(Rule, Opts) ->
-    which(Rule, Opts) /= undefined_module.
+    which(Rule, Opts) /= undefined_module
+        orelse maps:is_key(Rule, maps:get(?ALIASED_RULES_OPT, Opts, #{})).
 
-normalize_opts(Opts) when is_map(Opts) ->
+parse_aliased_rule(Alias) ->
+    Name = case alias_field(name, Alias) of
+        Bin when is_binary(Bin), Bin =/= <<>> -> binary_to_atom(Bin, utf8);
+        Atom when is_atom(Atom), Atom =/= undefined -> Atom;
+        _ -> error({invalid_aliased_rule, Alias})
+    end,
+    Rules = case alias_field(rules, Alias) of
+        undefined -> error({invalid_aliased_rule, Alias});
+        Rules0 -> Rules0
+    end,
+    {Name, Rules, alias_field(error, Alias)}.
+
+alias_field(Key, Alias) ->
+    case liver_maps:get(Key, Alias, undefined) of
+        undefined -> liver_maps:get(atom_to_binary(Key, utf8), Alias, undefined);
+        Value -> Value
+    end.
+
+normalize_opts(#{?ALIASED_RULES_OPT := _} = Opts) ->
+    %% already normalized (nested validation)
     Opts;
+normalize_opts(Opts) when is_map(Opts) ->
+    resolve_aliased_rules(Opts);
 normalize_opts(Opts) when is_list(Opts) ->
-    maps:from_list(Opts).
+    resolve_aliased_rules(maps:from_list(Opts)).
+
+%% Resolve the aliased rules once per call, so that a rule call costs at
+%% most one map lookup: the registered ones and the `aliased_rules' option
+%% (it wins, the first alias of a name in it too). Without any, the options
+%% stay as they are.
+resolve_aliased_rules(Opts) ->
+    Registered = persistent_term:get(?ALIASED_RULES_KEY, #{}),
+    case maps:get(aliased_rules, Opts, []) of
+        [] when map_size(Registered) =:= 0 ->
+            Opts;
+        List ->
+            PerCall = [begin
+                {Name, Rules, Error} = parse_aliased_rule(Alias),
+                {Name, {Rules, Error}}
+            end || Alias <- lists:reverse(List)],
+            Aliases = maps:merge(Registered, maps:from_list(PerCall)),
+            Opts#{?ALIASED_RULES_OPT => Aliases}
+    end.
 
 %% Active rule map for this call.
 %%
