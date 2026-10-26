@@ -77,7 +77,7 @@ These rules treat **JSON-style strings** as numbers when needed
 | `email` | — | Basic email check on a binary |
 | `url` | — | HTTP(S) URL check on a binary |
 | `iso_date` | — | `YYYY-MM-DD` binary → Erlang `{Y,M,D}` date |
-| `equal_to_field` | FieldName | Must equal another field’s value |
+| `equal_to_field` | FieldName | Must equal another field’s value, compared as strings (`<<"10">>` equals `10`) |
 
 ## Meta rules
 

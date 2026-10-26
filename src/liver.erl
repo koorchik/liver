@@ -11,6 +11,7 @@
 -export([custom_error/2]).
 
 -include("liver.hrl").
+-include("liver_rules.hrl").
 
 -define(IsKV(Data),
     (is_map(Data) orelse is_list(Data))
@@ -65,10 +66,16 @@ validate_list(Schema, Data, Opts0) when is_list(Data) andalso ?IsKV(Opts0) ->
 
 validate_term(Schema, Data, Opts0) when ?IsKV(Opts0) ->
     Opts = normalize_opts(Opts0),
+    %% A missing field (e.g. in 'or' branches) is validated as absent: only
+    %% required-like rules run, and it stays absent otherwise.
+    In = case Data of
+        ?MISSED_FIELD_VALUE -> #{};
+        _ -> #{'$fake_key' => Data}
+    end,
     %% liver_maps: the result is a proplist with return => proplist
-    case validate_map(#{'$fake_key' => Schema}, #{'$fake_key' => Data}, Opts) of
+    case validate_map(#{'$fake_key' => Schema}, In, Opts) of
         {ok, Out} ->
-            {ok, liver_maps:get('$fake_key', Out)};
+            {ok, liver_maps:get('$fake_key', Out, ?MISSED_FIELD_VALUE)};
         {error, Errors} ->
             {error, liver_maps:get('$fake_key', Errors)}
     end.
@@ -119,6 +126,9 @@ validate([{K, schema}|Keys], Schema, In, Out, Errors, Opts) ->
     case liver_rules:has_required(Rules2) of
         true ->
             case liver_rules:execute(Rules2, Opts) of
+                {ok, ?MISSED_FIELD_VALUE} ->
+                    %% e.g. an 'or' branch without required passed
+                    validate(Keys, Schema, In, Out, Errors, Opts);
                 {ok, Value2} ->
                     Out2 = liver_maps:put(K, Value2, Out),
                     validate(Keys, Schema, In, Out2, Errors, Opts);

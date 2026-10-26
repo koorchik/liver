@@ -511,6 +511,9 @@ rule_sets(_Config) ->
     %% return_proplist_nested_list
     ok(#{l => {nested_list,is_integer}}, #{l => [1]}, [{l,[1]}], #{return => proplist}),
     err(#{l => {nested_list,is_integer}}, #{l => [a]}, [{l,[not_integer]}], #{return => proplist}),
+    %% return_proplist_or_missing
+    ok(#{a => #{'or' => [[{default,5}],[email]]}}, #{}, [{a,5}], #{rule_set => livr_spec, return => proplist}),
+    err(#{a => #{'or' => [[required],[required,email]]}}, #{}, [{a,<<"REQUIRED">>}], #{rule_set => livr_spec, return => proplist}),
     %% return_map
     ok(#{a => is_integer}, [{a,1}], #{a => 1}, #{return => map}),
     %% livr_compatible

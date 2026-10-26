@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `livr_spec`: `equal_to_field` compares the values as strings
+  (`<<"10">>` equals `10`), as in LIVR 2.0.
+- `livr_spec`: `email` rejects whitespace (newlines, tabs) and a quoted local
+  part with `@`, as the LIVR 2.0 pattern does.
+- `livr_spec`: `'or'` runs on a missing field, so branches with `required`
+  return `REQUIRED`.
 - `return => proplist` with `nested_list`, `list_of`, `'or'` or a list as the
   root schema: it returned `format_error` or crashed.
 

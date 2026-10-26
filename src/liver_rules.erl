@@ -85,4 +85,6 @@ normalize([], _Data, Acc) ->
 is_required(required)       -> true;
 is_required(not_empty_list) -> true;
 is_required(default)        -> true;
+%% may contain required: runs on a missing field, see liver:validate_term/3
+is_required('or')           -> true;
 is_required(_)              -> false.
