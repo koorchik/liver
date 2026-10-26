@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The LIVR `aliases_positive` / `aliases_negative` suites run in
   `livr_rules_SUITE`.
 
+### Changed
+
+- CI: a rebar3 job runs `rebar3 ct` on OTP 25 and 29; `actions/checkout` v7.
+
 ### Fixed
 
 - `livr_spec`: `equal_to_field` compares the values as strings
