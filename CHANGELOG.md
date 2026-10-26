@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   JSON Schema (Draft 2020-12). Import supports `rule_set => erlang_standard`
   (default) or `livr_spec`. See [doc/json_schema.md](doc/json_schema.md).
 
+### Fixed
+
+- `return => proplist` with `nested_list`, `list_of`, `'or'` or a list as the
+  root schema: it returned `format_error` or crashed.
+
 ## [1.1.0] - 2026-10-07
 
 ### Breaking

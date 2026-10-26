@@ -65,11 +65,12 @@ validate_list(Schema, Data, Opts0) when is_list(Data) andalso ?IsKV(Opts0) ->
 
 validate_term(Schema, Data, Opts0) when ?IsKV(Opts0) ->
     Opts = normalize_opts(Opts0),
+    %% liver_maps: the result is a proplist with return => proplist
     case validate_map(#{'$fake_key' => Schema}, #{'$fake_key' => Data}, Opts) of
-        {ok, #{'$fake_key' := Val}} ->
-            {ok, Val};
-        {error, #{'$fake_key' := Err}} ->
-            {error, Err}
+        {ok, Out} ->
+            {ok, liver_maps:get('$fake_key', Out)};
+        {error, Errors} ->
+            {error, liver_maps:get('$fake_key', Errors)}
     end.
 
 which(Rule) ->
