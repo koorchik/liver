@@ -10,7 +10,11 @@ all() ->
         {group, maps_positive},
         {group, maps_negative},
         {group, proplists_positive},
-        {group, proplists_negative}
+        {group, proplists_negative},
+        {group, maps_aliases_positive},
+        {group, maps_aliases_negative},
+        {group, proplists_aliases_positive},
+        {group, proplists_aliases_negative}
     ].
 
 groups() ->
@@ -18,7 +22,11 @@ groups() ->
         {maps_positive, [parallel], ?LIVR_POSITIVE_CASES},
         {maps_negative, [parallel], ?LIVR_NEGATIVE_CASES},
         {proplists_positive, [parallel], ?LIVR_POSITIVE_CASES},
-        {proplists_negative, [parallel], ?LIVR_NEGATIVE_CASES}
+        {proplists_negative, [parallel], ?LIVR_NEGATIVE_CASES},
+        {maps_aliases_positive, [parallel], ?LIVR_ALIASES_POSITIVE_CASES},
+        {maps_aliases_negative, [parallel], ?LIVR_ALIASES_NEGATIVE_CASES},
+        {proplists_aliases_positive, [parallel], ?LIVR_ALIASES_POSITIVE_CASES},
+        {proplists_aliases_negative, [parallel], ?LIVR_ALIASES_NEGATIVE_CASES}
     ].
 
 init_per_suite(Config) ->
@@ -34,7 +42,15 @@ init_per_group(maps_negative, Config) ->
 init_per_group(proplists_positive, Config) ->
     [{data_form, proplists}, {init_type, positive} | Config];
 init_per_group(proplists_negative, Config) ->
-    [{data_form, proplists}, {init_type, negative} | Config].
+    [{data_form, proplists}, {init_type, negative} | Config];
+init_per_group(maps_aliases_positive, Config) ->
+    [{data_form, maps}, {init_type, aliases_positive} | Config];
+init_per_group(maps_aliases_negative, Config) ->
+    [{data_form, maps}, {init_type, aliases_negative} | Config];
+init_per_group(proplists_aliases_positive, Config) ->
+    [{data_form, proplists}, {init_type, aliases_positive} | Config];
+init_per_group(proplists_aliases_negative, Config) ->
+    [{data_form, proplists}, {init_type, aliases_negative} | Config].
 
 end_per_group(_Name, Config) ->
     Config2 = lists:keydelete(init_type, 1, Config),

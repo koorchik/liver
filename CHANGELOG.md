@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (default) or `livr_spec`. See [doc/json_schema.md](doc/json_schema.md).
 - LIVR aliased rules: `liver:add_aliased_rule/1` and the `aliased_rules`
   option of `validate/3`. See [README](README.md#add_aliased_rule1).
+- The LIVR `aliases_positive` / `aliases_negative` suites run in
+  `livr_rules_SUITE`.
 
 ### Fixed
 
