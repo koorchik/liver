@@ -217,9 +217,11 @@ like(_Args, <<>>, _Opts) ->
 like(Args, Value, _Opts) when is_binary(Value); is_number(Value) ->
     Value2 = to_binary(Value),
     {Pattern, ReOpts} = case Args of
-        [RegEx, <<"i">>|_]  -> {RegEx, [unicode, caseless]};
-        [RegEx|_]           -> {RegEx, [unicode]};
-        RegEx               -> {RegEx, [unicode]}
+        %% dollar_endonly: $ matches only at the end of the value, as in JavaScript,
+        %% not before a trailing newline
+        [RegEx, <<"i">>|_]  -> {RegEx, [unicode, dollar_endonly, caseless]};
+        [RegEx|_]           -> {RegEx, [unicode, dollar_endonly]};
+        RegEx               -> {RegEx, [unicode, dollar_endonly]}
     end,
     case re:compile(Pattern, ReOpts) of
         {ok, MP} ->

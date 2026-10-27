@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   part with `@`, as the LIVR 2.0 pattern does.
 - `livr_spec`: `'or'` runs on a missing field, so branches with `required`
   return `REQUIRED`.
+- `like`: `$` matches only at the end of the value, as in JavaScript, so
+  `^[0-9]{5}$` no longer accepts `"12345\n"`.
 - `return => proplist` with `nested_list`, `list_of`, `'or'` or a list as the
   root schema: it returned `format_error` or crashed.
 
